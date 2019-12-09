@@ -1,16 +1,20 @@
 import speedtest
-import matplotlib.pyplot as plt
-import numpy as np
 import time
-import _thread
+from grapher import InternetGraph
 
 file_headers = 'sever_time, client_time, download, upload, ping, downloaded, uploaded, serverid, clientisp, clientip, shareurl,\n'
 file_name = "speeds_%s.csv" % time.time()
 test_interval = 5
 servers = []
 threads = None
-graph_data = []
+graph = InternetGraph()
 
+
+def bps_to_mbps(n):
+	return round(float(n)/1048576,2)
+
+def b_to_mb(n):
+	return round(float(n)/8388608,2)
 
 def get_metrics(result):
 	return {
@@ -45,7 +49,6 @@ def run_test():
 	s.results.share()
 	logger("[Speedtest Object] -> Data logged to speedtest.net")
 	print (s.results.dict())
-	#print (s.results.)
 
 	return get_metrics(s.results.dict())
 
@@ -71,16 +74,16 @@ def pretty_print(data):
 
 	test_dur = round(float(data["test_duration"]),2)
 
-	download_speed_mbps = round(float(data["download"])/1048576,2)
-	download_speed_mb = round(float(data["download"])/8388608,2)
+	download_speed_mbps = bps_to_mbps(data["download"])
+	download_speed_mb = b_to_mb(data["download"])
 
-	upload_speed_mbps = round(float(data["upload"])/1048576,2)
-	upload_speed_mb = round(float(data["upload"])/8388608,2)
+	upload_speed_mbps = bps_to_mbps(data["upload"])
+	upload_speed_mb = b_to_mb(data["upload"])
 
-	download_data_mb = round(float(data["downloaded"])/1048576,2)
-	upload_data_mb = round(float(data["uploaded"])/1048576,2)
+	download_data_mb = bps_to_mbps(data["downloaded"])
+	upload_data_mb = bps_to_mbps(data["uploaded"])
 
-	graph_data.append([download_speed_mbps, upload_speed_mbps])
+	graph.update([download_speed_mbps, upload_speed_mbps])
 
 	print("\nTest Completed (Took %ss)!\nDownload Speed: %sMb/s [%sMB/s] (Data Used: %sMB)\nUpload Speed: %sMb/s [%sMB/s] (Data Used: %sMB)" %
 	      (test_dur, download_speed_mbps, download_speed_mb, download_data_mb, upload_speed_mbps, upload_speed_mb, upload_data_mb))
@@ -88,28 +91,6 @@ def pretty_print(data):
 
 def logger(line):
 	if False: print(line)
-
-
-def graph():
-	global graph_data, i
-
-	plt.ion()
-	plt.clf()
-
-	plt.plot(list(range(len(graph_data))), list(map(lambda x:x[0], graph_data)), "ro")
-	plt.plot(list(range(len(graph_data))), list(map(lambda x:x[1], graph_data)), "go")
-	plt.ylim(ymin=0)
-	plt.xlabel("Test Number (#)")
-	plt.ylabel("Download & Upload Speeds (Mbps)")
-
-	plt.draw()
-	plt.pause(0.01)
-
-
-def graph_updater():
-	while True:
-		graph()
-		time.sleep(1)
 
 
 def output_file(line):
@@ -127,8 +108,6 @@ def log_csv(dict):
 
 
 def main():
-	_thread.start_new_thread(graph_updater, ())
-
 	# Write CSV headers
 	output_file(file_headers)
 
